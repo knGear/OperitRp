@@ -34,6 +34,8 @@ export const WORLDBOOK_I18N_ZH_CN: WorldBookI18n = {
   tagCharacterCard: (value) => `角色卡 ${value}`,
   tagPinned: "常驻",
   tagRegex: "正则",
+  actionSearch: "搜索",
+  actionRefresh: "刷新",
   buttonImport: "导入",
   buttonEdit: "编辑",
   buttonDelete: "删除",
@@ -96,8 +98,11 @@ export const WORLDBOOK_I18N_ZH_CN: WorldBookI18n = {
   saveEditButton: "保存修改",
   createEntryButton: "创建条目",
   newEntryButton: "新建条目",
+  searchPlaceholder: "按名称、关键词或角色卡搜索",
+  searchEmptyTitle: "没有找到匹配条目",
+  searchEmptyDesc: "换个关键词试试，或者清空搜索查看全部条目。",
   listLoading: "加载中...",
   emptyTitle: "还没有世界书条目",
-  emptyDesc: "点击右上角新建，创建第一个条目。",
+  emptyDesc: "点击右上角加号，创建第一个条目。",
   emptyAction: "新建第一个条目"
 };

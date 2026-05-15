@@ -31,6 +31,8 @@ export interface WorldBookI18n {
   tagCharacterCard: (value: string) => string;
   tagPinned: string;
   tagRegex: string;
+  actionSearch: string;
+  actionRefresh: string;
   buttonImport: string;
   buttonEdit: string;
   buttonDelete: string;
@@ -93,6 +95,9 @@ export interface WorldBookI18n {
   saveEditButton: string;
   createEntryButton: string;
   newEntryButton: string;
+  searchPlaceholder: string;
+  searchEmptyTitle: string;
+  searchEmptyDesc: string;
   listLoading: string;
   emptyTitle: string;
   emptyDesc: string;

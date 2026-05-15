@@ -36,6 +36,8 @@ exports.WORLDBOOK_I18N_EN_US = {
     tagCharacterCard: (value) => `Card ${value}`,
     tagPinned: "Pinned",
     tagRegex: "Regex",
+    actionSearch: "Search",
+    actionRefresh: "Refresh",
     buttonImport: "Import",
     buttonEdit: "Edit",
     buttonDelete: "Delete",
@@ -98,8 +100,11 @@ exports.WORLDBOOK_I18N_EN_US = {
     saveEditButton: "Save Changes",
     createEntryButton: "Create Entry",
     newEntryButton: "New Entry",
+    searchPlaceholder: "Search by name, keyword, or character card",
+    searchEmptyTitle: "No matching entries found",
+    searchEmptyDesc: "Try another keyword, or clear the search to view all entries.",
     listLoading: "Loading...",
     emptyTitle: "No world book entries yet",
-    emptyDesc: "Click the top-right button to create your first entry.",
+    emptyDesc: "Tap the plus button in the top-right corner to create your first entry.",
     emptyAction: "Create First Entry"
 };

@@ -107,6 +107,8 @@ const CONTENT_SNIPPETS = [
         content: "<JSONPatch>\n```json\n[\n  {\n    \"op\": \"replace\",\n    \"path\": \"/stat_data/系统/积分\",\n    \"value\": 1\n  }\n]\n```\n</JSONPatch>"
     }
 ];
+const CHARACTER_CARD_MENU_WIDTH = 280;
+const CHARACTER_CARD_MENU_MAX_HEIGHT = 320;
 function resolveText() {
     const rawLocale = getLang();
     const locale = String(rawLocale || "").trim().toLowerCase();
@@ -145,6 +147,8 @@ function Screen(ctx) {
     const [deletingEntryId, setDeletingEntryId] = ctx.useState("deletingEntryId", "");
     const [togglingEntryId, setTogglingEntryId] = ctx.useState("togglingEntryId", "");
     const [importing, setImporting] = ctx.useState("importing", false);
+    const [showSearchBar, setShowSearchBar] = ctx.useState("showSearchBar", false);
+    const [searchQuery, setSearchQuery] = ctx.useState("searchQuery", "");
     const [editId, setEditId] = ctx.useState("editId", "");
     const [importPath, setImportPath] = ctx.useState("importPath", "");
     const [formName, setFormName] = ctx.useState("formName", "");
@@ -166,14 +170,17 @@ function Screen(ctx) {
     const [availableCards, setAvailableCards] = ctx.useState("availableCards", []);
     const [hasLoadedCards, setHasLoadedCards] = ctx.useState("hasLoadedCards", false);
     const formContentRef = ctx.useRef("formContentRef", "");
+    formContentRef.current = formContent;
     const t = resolveText();
     const colors = ctx.MaterialTheme.colorScheme;
     const { UI } = ctx;
     const effectiveInjectPosition = normalizeFormInjectPosition(formInjectTarget, formInjectPosition);
+    function getFormContentValue() {
+        return formContentRef.current;
+    }
     function setFormContentValue(value) {
-        const normalized = String(value || "");
-        formContentRef.current = normalized;
-        setFormContent(normalized);
+        formContentRef.current = value;
+        setFormContent(value);
     }
     function resetForm() {
         setEditId("");
@@ -261,8 +268,26 @@ function Screen(ctx) {
         }
         setFormInjectPosition(position);
     }
+    function toggleSearchBar() {
+        const nextVisible = !showSearchBar;
+        setShowSearchBar(nextVisible);
+        if (!nextVisible) {
+            setSearchQuery("");
+        }
+    }
+    function matchesEntrySearch(entry, query) {
+        const normalizedQuery = String(query || "").trim().toLowerCase();
+        if (!normalizedQuery) {
+            return true;
+        }
+        const characterCardName = resolveCharacterCardName(entry.character_card_id || "");
+        const haystack = [entry.name, ...(entry.keywords || []), characterCardName]
+            .map((value) => String(value || "").trim().toLowerCase())
+            .filter((value) => value.length > 0);
+        return haystack.some((value) => value.includes(normalizedQuery));
+    }
     function insertSnippet(snippetContent) {
-        setFormContentValue(appendSnippetContent(String(formContentRef.current || ""), snippetContent));
+        setFormContentValue(appendSnippetContent(getFormContentValue(), snippetContent));
         setShowSnippetPicker(false);
         ctx.showToast(t.toastSnippetInserted);
     }
@@ -435,11 +460,12 @@ function Screen(ctx) {
         }
     }
     async function doSave() {
+        const currentFormContent = getFormContentValue();
         if (!formName.trim()) {
             ctx.showToast(t.toastNameRequired);
             return;
         }
-        if (!formContent.trim()) {
+        if (!currentFormContent.trim()) {
             ctx.showToast(t.toastContentRequired);
             return;
         }
@@ -447,7 +473,7 @@ function Screen(ctx) {
         const normalizedInsertionDepth = Math.max(0, Number.parseInt(formInsertionDepth, 10) || 0);
         const payload = {
             name: formName.trim(),
-            content: formContent.trim(),
+            content: currentFormContent.trim(),
             keywords: formKeywords.trim(),
             is_regex: formIsRegex,
             case_sensitive: formCaseSensitive,
@@ -473,11 +499,14 @@ function Screen(ctx) {
             ctx.showToast(isEdit ? t.toastUpdated : t.toastCreated);
             setView("list");
             resetForm();
-            await loadEntries();
+            await loadEntries(true);
         }
         catch (error) {
             ctx.showToast(`${t.toastSaveFailedPrefix}${error.message}`);
         }
+    }
+    async function doRefresh() {
+        await Promise.all([loadEntries(true), queryCharacterCards(false)]);
     }
     function renderTag(label, backgroundColor, textColor) {
         return UI.Box({
@@ -779,6 +808,63 @@ function Screen(ctx) {
             ])
         ]);
     }
+    function renderToolbarAction(iconName, contentDescription, onClick, active = false) {
+        return UI.Box({
+            width: 40,
+            height: 40,
+            contentAlignment: "center",
+            modifier: ctx.Modifier.clip({ type: "circle" }).clickable(onClick)
+        }, [
+            UI.Icon({
+                name: iconName,
+                size: 18,
+                tint: active ? colors.primary : colors.onSurface,
+                contentDescription
+            })
+        ]);
+    }
+    function renderChoiceChip(label, selected, onClick, enabled = true) {
+        const chipShape = { type: "pill" };
+        const borderColor = !enabled
+            ? colors.outlineVariant.copy({ alpha: 0.55 })
+            : selected
+                ? colors.primary.copy({ alpha: 0.22 })
+                : colors.outlineVariant;
+        const backgroundColor = selected ? colors.primaryContainer.copy({ alpha: 0.38 }) : colors.surface;
+        const textColor = !enabled
+            ? colors.onSurfaceVariant.copy({ alpha: 0.6 })
+            : selected
+                ? colors.primary
+                : colors.onSurface;
+        const chipModifier = enabled
+            ? ctx.Modifier
+                .clip(chipShape)
+                .background(backgroundColor)
+                .border(1, borderColor, chipShape)
+                .clickable(onClick)
+            : ctx.Modifier.clip(chipShape).background(backgroundColor).border(1, borderColor, chipShape);
+        return UI.Box({
+            modifier: chipModifier.padding({ horizontal: 14, vertical: 9 })
+        }, [
+            UI.Row({
+                spacing: selected ? 6 : 0,
+                verticalAlignment: "center"
+            }, [
+                selected
+                    ? UI.Icon({
+                        name: "check",
+                        size: 16,
+                        tint: textColor
+                    })
+                    : null,
+                UI.Text({
+                    text: label,
+                    fontWeight: selected ? "bold" : "medium",
+                    color: textColor
+                })
+            ].filter(Boolean))
+        ]);
+    }
     function renderForm() {
         const isEdit = view === "edit";
         return UI.Column({
@@ -929,8 +1015,11 @@ function Screen(ctx) {
                         ]),
                         UI.DropdownMenu({
                             expanded: showCardPicker,
+                            width: CHARACTER_CARD_MENU_WIDTH,
+                            modifier: ctx.Modifier.heightIn({ maxHeight: CHARACTER_CARD_MENU_MAX_HEIGHT }),
                             properties: {
-                                focusable: true
+                                focusable: true,
+                                usePlatformDefaultWidth: false
                             },
                             onDismissRequest: () => {
                                 setShowCardPicker(false);
@@ -1122,36 +1211,13 @@ function Screen(ctx) {
                         style: "bodySmall",
                         color: colors.onSurfaceVariant
                     }),
-                    UI.Row({ fillMaxWidth: true, spacing: 8 }, [
-                        UI.FilledTonalButton({
-                            onClick: () => selectInjectTarget("system"),
-                            weight: 1
-                        }, [
-                            UI.Text({
-                                text: formInjectTarget === "system" ? `✓ ${t.injectTargetSystem}` : t.injectTargetSystem,
-                                fontWeight: formInjectTarget === "system" ? "bold" : "normal"
-                            })
-                        ]),
-                        UI.FilledTonalButton({
-                            onClick: () => selectInjectTarget("user"),
-                            weight: 1
-                        }, [
-                            UI.Text({
-                                text: formInjectTarget === "user" ? `✓ ${t.injectTargetUser}` : t.injectTargetUser,
-                                fontWeight: formInjectTarget === "user" ? "bold" : "normal"
-                            })
-                        ]),
-                        UI.FilledTonalButton({
-                            onClick: () => selectInjectTarget("assistant"),
-                            weight: 1
-                        }, [
-                            UI.Text({
-                                text: formInjectTarget === "assistant"
-                                    ? `✓ ${t.injectTargetAssistant}`
-                                    : t.injectTargetAssistant,
-                                fontWeight: formInjectTarget === "assistant" ? "bold" : "normal"
-                            })
-                        ])
+                    UI.LazyRow({
+                        fillMaxWidth: true,
+                        spacing: 8
+                    }, [
+                        renderChoiceChip(t.injectTargetSystem, formInjectTarget === "system", () => selectInjectTarget("system")),
+                        renderChoiceChip(t.injectTargetUser, formInjectTarget === "user", () => selectInjectTarget("user")),
+                        renderChoiceChip(t.injectTargetAssistant, formInjectTarget === "assistant", () => selectInjectTarget("assistant"))
                     ]),
                     UI.Spacer({ height: 8 }),
                     UI.Text({
@@ -1165,42 +1231,13 @@ function Screen(ctx) {
                         style: "bodySmall",
                         color: colors.onSurfaceVariant
                     }),
-                    UI.Row({ fillMaxWidth: true, spacing: 8 }, [
-                        UI.FilledTonalButton({
-                            onClick: () => selectInjectPosition("prepend"),
-                            weight: 1,
-                            enabled: formInjectTarget !== "assistant"
-                        }, [
-                            UI.Text({
-                                text: effectiveInjectPosition === "prepend"
-                                    ? `✓ ${t.injectPositionPrepend}`
-                                    : t.injectPositionPrepend,
-                                fontWeight: effectiveInjectPosition === "prepend" ? "bold" : "normal"
-                            })
-                        ]),
-                        UI.FilledTonalButton({
-                            onClick: () => selectInjectPosition("append"),
-                            weight: 1,
-                            enabled: formInjectTarget !== "assistant"
-                        }, [
-                            UI.Text({
-                                text: effectiveInjectPosition === "append"
-                                    ? `✓ ${t.injectPositionAppend}`
-                                    : t.injectPositionAppend,
-                                fontWeight: effectiveInjectPosition === "append" ? "bold" : "normal"
-                            })
-                        ]),
-                        UI.FilledTonalButton({
-                            onClick: () => selectInjectPosition("at_depth"),
-                            weight: 1
-                        }, [
-                            UI.Text({
-                                text: effectiveInjectPosition === "at_depth"
-                                    ? `✓ ${t.injectPositionAtDepth}`
-                                    : t.injectPositionAtDepth,
-                                fontWeight: effectiveInjectPosition === "at_depth" ? "bold" : "normal"
-                            })
-                        ])
+                    UI.LazyRow({
+                        fillMaxWidth: true,
+                        spacing: 8
+                    }, [
+                        renderChoiceChip(t.injectPositionPrepend, effectiveInjectPosition === "prepend", () => selectInjectPosition("prepend"), formInjectTarget !== "assistant"),
+                        renderChoiceChip(t.injectPositionAppend, effectiveInjectPosition === "append", () => selectInjectPosition("append"), formInjectTarget !== "assistant"),
+                        renderChoiceChip(t.injectPositionAtDepth, effectiveInjectPosition === "at_depth", () => selectInjectPosition("at_depth"))
                     ]),
                     effectiveInjectPosition === "at_depth"
                         ? UI.Column({
@@ -1329,56 +1366,48 @@ function Screen(ctx) {
             })
         ]);
     }
+    const hasSearchQuery = searchQuery.trim().length > 0;
+    const visibleEntries = hasSearchQuery ? entries.filter((entry) => matchesEntrySearch(entry, searchQuery)) : entries;
     const items = [
-        UI.Row({
+        UI.Column({
             key: "actions",
             fillMaxWidth: true,
-            horizontalArrangement: "end",
-            verticalAlignment: "center",
+            spacing: 8,
             padding: { horizontal: 4, vertical: 4 }
         }, [
-            UI.FilledTonalButton({
-                onClick: doCreate,
-                height: 36
+            UI.Row({
+                fillMaxWidth: true,
+                horizontalArrangement: "end",
+                verticalAlignment: "center",
+                spacing: 8
             }, [
-                UI.Row({
-                    spacing: 6,
-                    verticalAlignment: "center"
-                }, [
-                    UI.Icon({
-                        name: "add",
-                        tint: colors.onSecondaryContainer,
-                        size: 18
-                    }),
-                    UI.Text({
-                        text: t.newEntryButton,
-                        color: colors.onSecondaryContainer,
-                        fontWeight: "bold"
-                    })
-                ])
+                renderToolbarAction("search", t.actionSearch, toggleSearchBar, showSearchBar),
+                renderToolbarAction("refresh", t.actionRefresh, () => doRefresh()),
+                renderToolbarAction("uploadFile", t.buttonImport, doOpenImport),
+                renderToolbarAction("add", t.newEntryButton, doCreate)
             ]),
-            UI.Spacer({ width: 8 }),
-            UI.FilledTonalButton({
-                onClick: doOpenImport,
-                height: 36
-            }, [
-                UI.Row({
-                    spacing: 6,
-                    verticalAlignment: "center"
-                }, [
-                    UI.Icon({
-                        name: "uploadFile",
-                        tint: colors.onSecondaryContainer,
-                        size: 18
+            showSearchBar
+                ? UI.TextField({
+                    label: t.actionSearch,
+                    placeholder: t.searchPlaceholder,
+                    value: searchQuery,
+                    onValueChange: setSearchQuery,
+                    singleLine: true,
+                    fillMaxWidth: true,
+                    leadingIcon: UI.Icon({
+                        name: "search",
+                        size: 18,
+                        tint: colors.onSurfaceVariant
                     }),
-                    UI.Text({
-                        text: t.buttonImport,
-                        color: colors.onSecondaryContainer,
-                        fontWeight: "bold"
-                    })
-                ])
-            ])
-        ])
+                    trailingIcon: hasSearchQuery
+                        ? UI.IconButton({
+                            onClick: () => setSearchQuery(""),
+                            icon: "close"
+                        })
+                        : undefined
+                })
+                : null
+        ].filter(Boolean))
     ];
     if (view === "edit" || view === "create") {
         return UI.Box({
@@ -1450,8 +1479,34 @@ function Screen(ctx) {
             ])
         ]));
     }
+    else if (visibleEntries.length === 0) {
+        items.push(UI.Card({
+            key: "search-empty",
+            fillMaxWidth: true,
+            containerColor: colors.surfaceVariant,
+            elevation: 0
+        }, [
+            UI.Column({
+                fillMaxWidth: true,
+                horizontalAlignment: "center",
+                padding: 24,
+                spacing: 8
+            }, [
+                UI.Text({
+                    text: t.searchEmptyTitle,
+                    style: "titleMedium",
+                    color: colors.onSurface
+                }),
+                UI.Text({
+                    text: t.searchEmptyDesc,
+                    style: "bodySmall",
+                    color: colors.onSurfaceVariant
+                })
+            ])
+        ]));
+    }
     else {
-        for (const entry of entries) {
+        for (const entry of visibleEntries) {
             items.push(renderCard(entry));
         }
     }

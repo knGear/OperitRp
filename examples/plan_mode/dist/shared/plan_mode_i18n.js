@@ -4,7 +4,7 @@ exports.resolvePlanModeI18n = resolvePlanModeI18n;
 const ZH_CN = {
     menuTitle: "计划模式",
     menuDescriptionEnabled: "已开启：禁止写入工具，确认后输出 <plantodo> 计划。",
-    menuDescriptionDisabled: "已关闭：若工作区存在当前计划，会要求 AI 先读取并在完成后清理。",
+    menuDescriptionDisabled: "开启后，对话将不会修改文件，而是向用户确定一个计划，批准后才开始实施。",
     menuDescriptionWorkspaceMissing: "未绑定工作区，无法开启。",
     toastWorkspaceRequired: "当前聊天未绑定工作区，不能开启计划模式。",
     toastChatViewMissing: "当前没有可用的聊天视图，无法开始实施。",

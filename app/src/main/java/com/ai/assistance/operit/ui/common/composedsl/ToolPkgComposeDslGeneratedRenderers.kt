@@ -471,10 +471,16 @@ internal fun renderTextFieldNode(
             )
         )
     }
+    var lastAppliedExternalValue by remember(textFieldIdentity) { mutableStateOf(externalValue) }
     var isFocused by remember(textFieldIdentity) { mutableStateOf(false) }
 
     LaunchedEffect(textFieldIdentity, externalValue, isFocused) {
-        if (externalValue == textFieldValue.text || isFocused) {
+        if (externalValue == textFieldValue.text) {
+            lastAppliedExternalValue = externalValue
+            return@LaunchedEffect
+        }
+        val externalValueChanged = externalValue != lastAppliedExternalValue
+        if (isFocused && !externalValueChanged) {
             return@LaunchedEffect
         }
         val start = textFieldValue.selection.start.coerceIn(0, externalValue.length)
@@ -484,6 +490,7 @@ internal fun renderTextFieldNode(
                 text = externalValue,
                 selection = TextRange(start, end)
             )
+        lastAppliedExternalValue = externalValue
     }
     val textStyle =
         composeDslTextFieldStyleFromValue(styleMap)
