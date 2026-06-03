@@ -1382,8 +1382,7 @@ private fun parseMCPServiceToolNames(listResponse: JSONObject?): Map<String, Lis
     for (serviceIndex in 0 until services.length()) {
         val service = services.optJSONObject(serviceIndex) ?: continue
         val serviceName = service.optString("name", "").trim()
-        val isReady = service.optBoolean("active", false) && service.optBoolean("ready", false)
-        if (serviceName.isEmpty() || !isReady) {
+        if (serviceName.isEmpty()) {
             continue
         }
 
