@@ -1992,17 +1992,18 @@ class ChatViewModel(private val context: Context) : ViewModel() {
                 }
                 AppLogger.d(TAG, "All files attached successfully")
                 
-                // Set the pre-filled message
-                AppLogger.d(TAG, "Setting pre-filled message")
-                val text = sharedText?.trim()
-                if (!text.isNullOrBlank()) {
-                    messageProcessingDelegate.updateUserMessage(
-                        TextFieldValue(text)
-                    )
-                } else {
-                    messageProcessingDelegate.updateUserMessage(
-                        TextFieldValue(context.getString(R.string.chat_prefill_check_file))
-                    )
+                if (messageProcessingDelegate.userMessage.value.text.isBlank()) {
+                    AppLogger.d(TAG, "Setting pre-filled message")
+                    val text = sharedText?.trim()
+                    if (!text.isNullOrBlank()) {
+                        messageProcessingDelegate.updateUserMessage(
+                            TextFieldValue(text)
+                        )
+                    } else {
+                        messageProcessingDelegate.updateUserMessage(
+                            TextFieldValue(context.getString(R.string.chat_prefill_check_file))
+                        )
+                    }
                 }
 
                 // Clear processing state

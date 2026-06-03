@@ -699,6 +699,11 @@
 
     <!-- Theme Settings Screen -->
     <string name="theme_title_mode">主题模式</string>
+    <string name="theme_tab_basic">基础</string>
+    <string name="theme_tab_background">背景</string>
+    <string name="theme_tab_chat">聊天</string>
+    <string name="theme_tab_input">输入栏</string>
+    <string name="theme_tab_interface">界面栏</string>
     <string name="theme_system_title">系统主题</string>
     <string name="theme_follow_system">跟随系统主题</string>
     <string name="theme_follow_system_desc">开启后会根据系统深色模式自动切换主题</string>
