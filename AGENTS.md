@@ -29,3 +29,32 @@
 如果类型就是string|undef，那么不要直接as string！！那么请使用?? ""或者写个if！！
 
 ts的报错catch后需要log出来
+
+## RP实现状态
+
+### 版本
+- 当前版本: 1.11.0RP0.07
+- 包名: com.ai.assistance.operitrp
+- 软件名: OperitRp
+
+### 已完成
+- 数据层: RpValueEntry, RpValueManager, RpPreferences, RpRandomOpeningManager
+- 工具层: 13个AI工具（面板7个+模板6个）
+- 提示词层: RpIdentityPromptBuilder, ConversationService注入, AIMessageManager处理
+- UI层: P面板弹窗编辑, 设置页完整展开, u/s切换, 随机开局按钮
+- 导航: 侧栏第五个"角色扮演强化", 标题OperAI_RP
+- 签名: key/operitrp-release.jks
+
+### 关键设计
+- 随机标记: "-" 表示需要随机（enableRandomOnStart=true时prompt显示"-"）
+- 轮次: 直接数user消息数量（排除system_rp），不存计数器
+- system_rp: sender="user" + roleName="system_rp"，作为USER类型+[Narrator]前缀注入AI
+- 快照: 每条user消息前保存面板快照，删除时恢复
+- 随机开局: 点击按钮→随机标记条目→注入system_rp消息（确认数值+提示词+第0轮指令）
+
+### AI工具（13个）
+**面板7个:** rp_set, rp_adjust, rp_random, rp_add, rp_remove, rp_rename, rp_update_entry
+**模板6个:** rp_template_read, rp_template_set, rp_template_add, rp_template_remove, rp_template_rename, rp_template_update_entry
+
+### 修复记录
+- v0.07: 修复400错误（system_rp改为USER类型注入）, 修复轮次计数（改为直接数user消息）, 修复随机开局按钮无响应, 修复P面板R列显示
